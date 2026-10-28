@@ -31,6 +31,10 @@ from mtlfd_adaptation.camera_projection import build_sample_projection
 from mtlfd_adaptation.camera_projection_real import build_sample_projection as \
     build_sample_projection_real
 from mtlfd_adaptation.trajectory_bridge import load_traj
+from mtlfd_adaptation.augmentations import (
+    random_recolor_arm,
+    remove_joystick_copy_paste,
+)
 
 ALL_PICK_PLACE_TASKS = list(range(16))
 
@@ -49,7 +53,12 @@ class MTLFDAgentTeacherDataset(Dataset):
                  crop=(0, 0, 0, 0), demo_crop=(0, 0, 0, 0),
                  rand_flip=False, flip_sync=True, color_jitter=None, rand_crop=None,
                  rand_translate=None, sample_sides=True, extra_samp_bound=0.4,
-                 waypoints=True, grasp=True, is_real=False, **_ignored):
+                 waypoints=True, grasp=True, is_real=False,
+                 person_aug=False,
+                 person_aug_prob=0.5,
+                 joystick_aug=False,
+                 joystick_source_roi=(332, 98, 486, 136),
+                 joystick_target_roi=(333, 59, 487, 97), **_ignored):
         assert mode in ('train', 'val', 'test'), f'unsupported mode {mode!r}'
         self.root_dir = root_dir
         self.task_name = task_name
@@ -74,6 +83,14 @@ class MTLFDAgentTeacherDataset(Dataset):
         self.extra_samp_bound = extra_samp_bound
         self.waypoints = waypoints
         self.grasp = grasp
+
+        # Custom visual augmentations (agent frames only)
+        self.person_aug = person_aug
+        self.person_aug_prob = person_aug_prob
+
+        self.joystick_aug = joystick_aug
+        self.joystick_source_roi = tuple(joystick_source_roi)
+        self.joystick_target_roi = tuple(joystick_target_roi)
 
         test_tasks = sorted(set(test_tasks))
         if train_tasks is None:
@@ -192,15 +209,58 @@ class MTLFDAgentTeacherDataset(Dataset):
         start = AGENT_SETTLE_STEPS if self.waypoints else np.random.randint(0, max(1, n - self.T_pair))
         chosen_t = [min(j + start, n - 1) for j in range(self.T_pair + 1)]
 
+
+        # ---------------------------------------------------------
+        # AGENT IMAGES + CUSTOM AUGMENTATIONS
+        # ---------------------------------------------------------
+
         images = []
+
         for t in chosen_t:
-            img = crop_fn(elements[t]['obs']['image'], self.crop)
+
+            # Original image, before crop and resize
+            img = elements[t]['obs']['image']
+
+            # 1. JOYSTICK REMOVAL (deterministic)
+            # ROIs are defined on the original image resolution.
+            if self.mode == 'train' and self.joystick_aug:
+                img = remove_joystick_copy_paste(
+                    img[None],
+                    source_roi=self.joystick_source_roi,
+                    target_roi=self.joystick_target_roi,
+                )[0]
+
+            # Existing crop and resize
+            img = crop_fn(img, self.crop)
             img = resize(img, (self.width, self.height))
+
             images.append(img[None])
+
         images = np.concatenate(images, 0)
-        images, stats = randomize_video(images, self.color_jitter, None, self.rand_crop, 0,
-                                         self.rand_translate, True, rand_flip=self.rand_flip,
-                                         force_flip=force_flip)
+
+        # 2. PERSON RECOLORING (MimicPlay)
+        # Applied after crop/resize, before normalization.
+        # One random color for the entire agent sequence.
+        if self.mode == 'train' and self.person_aug:
+            images = random_recolor_arm(
+                images,
+                perform_aug=True,
+                aug_p=self.person_aug_prob,
+            )
+
+        # 3. EXISTING OSVI-AWDA AUGMENTATIONS
+        images, stats = randomize_video(
+            images,
+            self.color_jitter,
+            None,
+            self.rand_crop,
+            0,
+            self.rand_translate,
+            True,
+            rand_flip=self.rand_flip,
+            force_flip=force_flip,
+        )
+
         proj_fn = build_sample_projection_real if self.is_real else build_sample_projection
         projection_matrix = proj_fn(self.crop, stats, (self.height, self.width))
 

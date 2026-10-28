@@ -17,7 +17,9 @@ _TRAINING_ROOT = os.path.normpath(os.path.join(
     os.path.dirname(__file__), '..', '..', 'Multi-Task-LFD-Training-Framework', 'training'))
 if _TRAINING_ROOT not in sys.path:
     sys.path.insert(0, _TRAINING_ROOT)
-
+# Compatibility with legacy trajectories pickled as `savers.Trajectory`
+from multi_task_il.datasets import savers as _mtlfd_savers
+sys.modules.setdefault("savers", _mtlfd_savers)
 
 class AliasedTrajectory:
     """Wraps a multi_task_il Trajectory so `.get(t)['obs']['image']` is available (aliased from
@@ -36,9 +38,26 @@ class AliasedTrajectory:
     def get(self, t, decompress=True):
         step = self._traj.get(t, decompress=decompress)
         obs = step['obs']
+
+        # Normalize camera key names across different collector versions.
+        # Some trajectories (e.g. task_00) use:
+        #   front_camera_image / front_camera_depth
+        # while the newer ones use:
+        #   camera_front_image / camera_front_depth
+        if 'camera_front_image' not in obs and 'front_camera_image' in obs:
+            obs['camera_front_image'] = obs['front_camera_image']
+
+        if 'camera_front_depth' not in obs and 'front_camera_depth' in obs:
+            obs['camera_front_depth'] = obs['front_camera_depth']
+
+        # OSVI-AWDA expects obs['image'].
+        # Real images are decoded by OpenCV in BGR order, therefore convert to RGB.
         if 'image' not in obs and 'camera_front_image' in obs:
-            obs['image'] = obs['camera_front_image'][..., ::-1] if self._flip_bgr \
-                else obs['camera_front_image']
+            if self._flip_bgr:
+                obs['image'] = obs['camera_front_image'][..., ::-1].copy()
+            else:
+                obs['image'] = obs['camera_front_image']
+
         return step
 
     def __getitem__(self, t):

@@ -5,13 +5,20 @@ import cv2
 import numpy as np
 
 
+
 def recolor_arm(img_seq, color, new_color):
     """
-    Original recolor_arm augmentation from MimicPlay.
+    MimicPlay recoloring adapted to the human dataset.
 
-    img_seq: RGB image sequence (T, H, W, 3)
-    color: original color threshold
-    new_color: random RGB replacement color
+    Input:
+        img_seq: RGB images (T, H, W, 3)
+
+    ROI:
+        x = [60, 150)
+        Full image height
+
+    Expected image size:
+        180 x 100
     """
 
     new_img_seq = copy.deepcopy(img_seq)
@@ -19,17 +26,20 @@ def recolor_arm(img_seq, color, new_color):
     mask_img = new_img_seq <= color
     mask_img = np.sum(mask_img, axis=3) == 3
 
-    mask_img[:, :, :30] = False
-    mask_img[:, :, 100:] = False
+    # Person ROI verified after human crop and resize
+    mask_img[:, :, :60] = False
+    mask_img[:, :, 150:] = False
 
-    # Erosion to remove isolated points
-    mask_img = np.array(
+    # Apply 3x3 erosion independently to each frame
+    kernel = np.ones((3, 3), np.uint8)
+
+    mask_img = np.stack([
         cv2.erode(
-            np.array(mask_img, np.uint8),
-            np.ones((3, 3), np.uint8)
-        ),
-        np.bool_
-    )
+            mask.astype(np.uint8),
+            kernel
+        ).astype(np.bool_)
+        for mask in mask_img
+    ], axis=0)
 
     new_img_seq[mask_img, :] = new_color
 

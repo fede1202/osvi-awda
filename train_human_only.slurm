@@ -20,7 +20,9 @@ BASE="/mnt/beegfs/f.demaio28/osvi_awda_finetune/checkpoints"
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate osvi_mtlfd_fdemaio
 
+# CUDA 11.7 / Numba compatibility
 export NUMBA_CUDA_USE_NVIDIA_BINDING=1
+export CUDA_HOME="/mnt/beegfs/f.demaio28/osvi_awda_finetune/cuda117_toolkit"
 
 cd "$REPO"
 

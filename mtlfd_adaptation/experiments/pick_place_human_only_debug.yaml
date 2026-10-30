@@ -1,0 +1,97 @@
+batch_size: 30
+batches: 3200000
+dataset:
+  T_context: 10
+  T_pair: 1
+  agent_context: 0
+  agent_name: human_osvi_front_grasp_final
+  color_jitter: null
+  crop:
+  - 0
+  - 30
+  - 140
+  - 120
+  demo_crop:
+  - 0
+  - 30
+  - 140
+  - 120
+  demo_name: human_rgb
+  extra_samp_bound: 0.4
+  flip_sync: true
+  grasp: true
+  height: 100
+  is_real: true
+  person_aug: false
+  person_aug_prob: 0.5
+  joystick_aug: true
+  joystick_source_roi:
+  - 186
+  - 89
+  - 329
+  - 131
+  joystick_target_roi:
+  - 339
+  - 58
+  - 482
+  - 100
+  rand_crop: null
+  rand_flip: false
+  rand_translate:
+  - 0
+  - 0
+  root_dir: /mnt/beegfs/f.demaio28/osvi_awda_finetune/data/opt_dataset
+  sample_sides: true
+  task_name: pick_place
+  test_tasks:
+  - 0
+  - 5
+  - 10
+  - 15
+  train_tasks:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 6
+  - 7
+  - 8
+  - 9
+  - 11
+  - 12
+  - 13
+  - 14
+  type: mtlfd agent teacher
+  waypoints: true
+  width: 180
+epochs: 2000
+goal_loss: false
+image_waypoints: true
+img_log_freq: 500
+loader_workers: 10
+log_freq: 20
+lr: 0.0005
+mixup: true
+policy:
+  concat_state: false
+  const_var: true
+  grasp: true
+  latent_dim: 60
+  lstm_config:
+    is_rnn: false
+    n_layers: 1
+    out_dim: 40
+  n_mixtures: 2
+  pred_point: true
+  sub_waypoints: true
+  vis:
+    attn_heads: 4
+    n_st_attn: 2
+    normalize: false
+    st_goal_attn: true
+    use_pe: true
+  waypoints: 5
+samples_per_task: 2
+save_freq: 1000
+save_optim: true
+waypoints: true

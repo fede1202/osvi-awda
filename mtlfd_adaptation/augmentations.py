@@ -77,23 +77,25 @@ def remove_joystick_copy_paste(
     img_seq,
     source_roi,
     target_roi,
+    interpolation=cv2.INTER_LINEAR,
 ):
     """
-    Remove the joystick by copying an empty table region
-    over the joystick region.
+    Remove the joystick by copying a small empty-table region
+    and resizing it to cover the joystick region.
 
     Args:
         img_seq: RGB image sequence, shape (T, H, W, 3).
-        source_roi: (x1, y1, x2, y2), empty table region.
-        target_roi: (x1, y1, x2, y2), joystick region.
+        source_roi: (x1, y1, x2, y2), source crop from empty table.
+        target_roi: (x1, y1, x2, y2), target joystick region.
+        interpolation: OpenCV interpolation used for resizing.
 
     Returns:
         Image sequence with the joystick region replaced.
 
     Notes:
         - Deterministic transformation.
-        - Applied identically to every frame.
-        - Source and target ROIs must have the same size.
+        - Source and target ROIs can have different sizes.
+        - The source patch is resized to the target size.
         - Original images are not modified.
     """
 
@@ -103,48 +105,28 @@ def remove_joystick_copy_paste(
     tx1, ty1, tx2, ty2 = target_roi
 
     if img_seq.ndim != 4 or img_seq.shape[-1] != 3:
-        raise ValueError(
-            "img_seq must have shape (T, H, W, 3)"
-        )
+        raise ValueError("img_seq must have shape (T, H, W, 3)")
 
     _, height, width, _ = img_seq.shape
 
-    # Check ROI boundaries
     for x1, y1, x2, y2 in (source_roi, target_roi):
         if not (0 <= x1 < x2 <= width):
             raise ValueError("Invalid ROI x coordinates")
-
         if not (0 <= y1 < y2 <= height):
             raise ValueError("Invalid ROI y coordinates")
-
-    source_width = sx2 - sx1
-    source_height = sy2 - sy1
 
     target_width = tx2 - tx1
     target_height = ty2 - ty1
 
-    if (
-        source_width != target_width
-        or source_height != target_height
-    ):
-        raise ValueError(
-            "Source and target ROIs must have the same size"
+    for t in range(img_seq.shape[0]):
+        table_patch = img_seq[t, sy1:sy2, sx1:sx2, :].copy()
+
+        resized_patch = cv2.resize(
+            table_patch,
+            (target_width, target_height),
+            interpolation=interpolation
         )
 
-    # Copy the empty table patch from each frame
-    table_patch = img_seq[
-        :,
-        sy1:sy2,
-        sx1:sx2,
-        :
-    ].copy()
-
-    # Paste it over the joystick region
-    new_img_seq[
-        :,
-        ty1:ty2,
-        tx1:tx2,
-        :
-    ] = table_patch
+        new_img_seq[t, ty1:ty2, tx1:tx2, :] = resized_patch
 
     return new_img_seq

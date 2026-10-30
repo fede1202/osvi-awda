@@ -11,7 +11,22 @@ own decompression logic, so we don't have to reimplement JPEG (de)compression he
 """
 import os
 import sys
-import pickle as pkl
+import sys
+
+if sys.version_info < (3, 8):
+    import pickle5 as pkl
+else:
+    import pickle as pkl
+
+import sys
+import numpy as np
+
+# Compatibility for NumPy 2.x pickles loaded with NumPy 1.x
+if not hasattr(np, "_core"):
+    sys.modules["numpy._core"] = np.core
+    sys.modules["numpy._core.multiarray"] = np.core.multiarray
+    sys.modules["numpy._core.numeric"] = np.core.numeric
+    sys.modules["numpy._core.umath"] = np.core.umath
 
 _TRAINING_ROOT = os.path.normpath(os.path.join(
     os.path.dirname(__file__), '..', '..', 'Multi-Task-LFD-Training-Framework', 'training'))

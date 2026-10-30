@@ -100,8 +100,20 @@ class MTLFDAgentTeacherDataset(Dataset):
         # (matches Trainer's own use of mode='test' for its "val" loader) -> held-out test_tasks.
         subtasks = self.train_tasks if mode == 'train' else self.test_tasks
 
-        agent_dir = os.path.join(root_dir, task_name, f'{agent_name}_{task_name}')
-        demo_dir = os.path.join(root_dir, task_name, f'{demo_name}_{task_name}')
+        # Support both the existing dataset naming convention
+        # and datasets with an explicit directory name.
+        agent_dir = os.path.join(
+            root_dir, task_name, f'{agent_name}_{task_name}'
+        )
+
+        if not os.path.isdir(agent_dir):
+            agent_dir = os.path.join(
+                root_dir, task_name, agent_name
+            )
+
+        demo_dir = os.path.join(
+            root_dir, task_name, f'{demo_name}_{task_name}'
+        )
 
         self.agent_files, self.demo_files = [], []
         self.pairs = []

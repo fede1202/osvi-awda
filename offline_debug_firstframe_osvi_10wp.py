@@ -77,7 +77,7 @@ def main():
     ds_cfg.update({
         "root_dir": "/mnt/beegfs/f.demaio28/osvi_awda_finetune/data/opt_dataset",
         "task_name": "pick_place",
-        "agent_name": "human_osvi_front_grasp_final",
+        "agent_name": "real_eye_in_hand_ur5e",
         "demo_name": "human_rgb",
         "train_tasks": discovered,
         "test_tasks": [],

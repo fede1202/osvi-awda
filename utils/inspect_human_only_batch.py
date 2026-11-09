@@ -107,9 +107,9 @@ def main():
 
     print("Total samples:", len(task_names))
 
-    assert len(task_names) == 24
-    assert len(counts) == 12
-    assert all(count == 2 for count in counts.values())
+    assert len(task_names) == samples_per_task * len(batch_sampler.tasks)
+    assert len(counts) == len(batch_sampler.tasks)
+    assert all(count == samples_per_task for count in counts.values())
 
     print("\nBatch composition verified!")
 

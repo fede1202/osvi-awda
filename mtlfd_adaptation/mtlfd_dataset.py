@@ -115,6 +115,11 @@ class MTLFDAgentTeacherDataset(Dataset):
             root_dir, task_name, f'{demo_name}_{task_name}'
         )
 
+        if not os.path.isdir(demo_dir):
+            demo_dir = os.path.join(
+                root_dir, task_name, demo_name
+            )
+
         self.agent_files, self.demo_files = [], []
         self.pairs = []
         # task_ids[i] = which task_id self.pairs[i] belongs to - parallel array, used by
@@ -170,7 +175,7 @@ class MTLFDAgentTeacherDataset(Dataset):
                           (-1 if random.random() > 0.5 else 1)]
 
         agent_traj, _ = load_traj(self.agent_files[a_i], is_real=self.is_real)
-        demo_traj, _ = load_traj(self.demo_files[d_i])
+        demo_traj, _ = load_traj(self.demo_files[d_i], is_real=self.is_real)
 
         context = self._make_context(demo_traj, force_flip=force_flip)
         traj = self._make_agent_sample(agent_traj, force_flip=force_flip)
